@@ -6,6 +6,8 @@ from django.views.decorators.csrf import csrf_exempt
 
 from django.views.generic.base import TemplateView
 
+from items.models import Item
+
 
 class HomePageView(TemplateView):
     template_name = 'home.html'
@@ -19,8 +21,10 @@ def stripe_config(request):
 
 
 @csrf_exempt
-def create_checkout_session(request):
+def create_checkout_session(request, *args, **kwargs):
     if request.method == 'GET':
+        items = []
+        items.append(Item.objects.get(pk=1))
         domain_url = 'http://localhost:8000/'
         stripe.api_key = settings.STRIPE_SECRET_KEY
         try:
@@ -33,10 +37,16 @@ def create_checkout_session(request):
                 mode='payment',
                 line_items=[
                     {
+                        'price_data': {
+                            'currency': 'usd',
+                            'unit_amount': int(items[0].price) * 100,
+                            'product_data': {
+                                'name': items[0].name
+                            },
+                        },
                         'quantity': 1,
-                        'price': 'price_1OU1wYI0mothXsRmQ16r481d',
-                    }
-                ]
+                    },
+                ],
             )
             return JsonResponse({'sessionId': checkout_session['id']})
         except Exception as e:
